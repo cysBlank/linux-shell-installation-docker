@@ -4,6 +4,10 @@ SYSTEMDDIR=/usr/lib/systemd/system
 #SYSTEMDDIR=/opt
 DOCKERDIR=/usr/bin
 #DOCKERDIR=/tmp
+echo "start uninstalling  docker"
+echo "======================================="
+# 停止docker服务
+sudo systemctl stop docker
 
 echo '删除docker.service...'
 rm -rf  ${SYSTEMDDIR}/docker.service
