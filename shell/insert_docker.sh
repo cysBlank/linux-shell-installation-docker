@@ -1,11 +1,22 @@
 #!/bin/sh
-usage(){
+usage() {
   echo "使用方法: $0 FILE_NAME_DOCKER.tgz"
   echo "        $0 docker-20.10.17.tgz"
   echo "获取dokcer包地址 docker binary from: https://download.docker.com/linux/static/stable/x86_64/"
   echo "或者直接下载: wget https://download.docker.com/linux/static/stable/x86_64/docker-20.10.17.tgz"
   echo ""
 }
+creatDaemon() {
+  #创建配置文件
+  sudo mkdir -p /etc/docker
+  cat >/etc/docker/daemon.json <<EOF
+{
+  "log-driver":"json-file",
+  "log-opts": {"max-size":"100m", "max-file":"3"}
+}
+EOF
+}
+
 #DOCKERDIR=/tmp
 DOCKERDIR=/usr/bin
 DOCKERBIN=docker
@@ -26,7 +37,7 @@ if [ ! -f ${FILETARGZ} ]; then
 fi
 ##解压
 echo "##tar : tar zxvf ${FILETARGZ}"
-tar zxvf  ${FILETARGZ}
+tar zxvf ${FILETARGZ}
 echo
 
 ##拷贝
@@ -37,7 +48,8 @@ cp -p ${DOCKERBIN}/* ${DOCKERDIR} >/dev/null 2>&1
 #echo "##systemd service: ${SERVICEFILE}"
 echo "##docker.service: create docker systemd file  "
 #注册service
-sh REGDocker.sh 
+sh REGDocker.sh
+creatDaemon
 
 ## reload system
 systemctl daemon-reload
@@ -51,7 +63,7 @@ echo "##Service enabled: ${SERVICENAME}"
 systemctl enable ${SERVICENAME}
 
 echo "## docker version"
-docker  version
+docker version
 
 ##清理安装残留
 rm -rf docker

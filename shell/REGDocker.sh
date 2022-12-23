@@ -1,5 +1,4 @@
 cat > /usr/lib/systemd/system/docker.service <<EOF
-#cat > docker.service <<EOF
 
 [Unit]
 
