@@ -21,7 +21,7 @@ checkIp() {
   array=($(echo $local_ip | tr '\n' ' '))
   if [ $1 ]; then
     for var in ${array[@]}; do
-      if [[ $var =~ "$1" ]]; then
+      if [[ $var =~ "${1%%.*}" ]]; then
         INPUTFLG=false
         break
       fi
@@ -36,11 +36,14 @@ checkIp() {
   fi
 }
 
+
 creatDaemon() {
   #创建配置文件
   sudo mkdir -p /etc/docker
   cat >/etc/docker/daemon.json <<EOF
 {
+  "log-driver":"json-file",
+  "log-opts": {"max-size":"100m", "max-file":"3"},
   "bip": "${DOCKERIP}/24",
   "default-address-pools": [
     {
@@ -52,50 +55,18 @@ creatDaemon() {
 EOF
 }
 
-if [ $# -ne 1 ]; then
-  usage
-  exit 1
-else
-  FILETARGZ="$1"
-fi
 
-if [ ! -f ${FILETARGZ} ]; then
+creatDefaultDaemon() {
+    #创建配置文件
+    sudo mkdir -p /etc/docker
+	cat >/etc/docker/daemon.json <<EOF
+{
+  "log-driver":"json-file",
+  "log-opts": {"max-size":"100m", "max-file":"3"}
+}
+EOF
+}
 
-  usage
-  echo Error $1 文件不存在
-  exit 1
-fi
-
-checkIp
-
-if [ $IPFLG == true ]; then
-  insertDocker
-else
-  echo "监测到你的网卡与docker网卡冲突 请手动配置docker网卡 按照下面提示安装"
-  echo "输入docker网卡ip"
-  read docip
-  if [ ! $docip ]; then
-    echo "Error 不可输入空的IP "
-    exit 1
-  fi
-  checkIp $docip
-  if [ ${INPUTFLG} == true ]; then
-    DOCKERIP=$docip
-    echo "请输入docker网络池的初始IP "
-    read poolip
-    if [ ! $poolip ]; then
-      echo "Error 不可输入空的IP "
-      exit 1
-    fi
-    DOCKERIPPOOL=$poolip
-    echo "docker ip is $DOCKERIP  docker address pools $DOCKERIPPOOL "
-    creatDaemon
-    insertDocker
-  else
-    echo "Error IP 冲突"
-    exit 1
-  fi
-fi
 
 insertDocker() {
   ##解压
@@ -130,3 +101,54 @@ insertDocker() {
   ##清理安装残留
   rm -rf docker
 }
+
+
+
+if [ $# -ne 1 ]; then
+  usage
+  exit 1
+else
+  FILETARGZ="$1"
+fi
+
+if [ ! -f ${FILETARGZ} ]; then
+
+  usage
+  echo Error $1 文件不存在
+  exit 1
+fi
+
+checkIp
+
+sleep 1
+
+if [ $IPFLG == true ]; then
+  creatDefaultDaemon
+  insertDocker
+else
+  echo "监测到你的网卡与docker网卡冲突 请手动配置docker网卡 按照下面提示安装"
+  echo "输入docker网卡ip ip 网段不能与现有的网段有冲突 ifconfig 查看，不确定可 ctrl+c 终止 查看后重新运行"
+  read docip
+  if [ ! $docip ]; then
+    echo "Error 不可输入空的IP "
+    exit 1
+  fi
+  checkIp $docip
+  if [ ${INPUTFLG} == true ]; then
+    DOCKERIP=$docip
+    echo "请输入docker网络池的初始IP "
+    read poolip
+    if [ ! $poolip ]; then
+      echo "Error 不可输入空的IP "
+      exit 1
+    fi
+    DOCKERIPPOOL=$poolip
+    echo "docker ip is $DOCKERIP  docker address pools $DOCKERIPPOOL "
+    creatDaemon
+    insertDocker
+  else
+    echo "Error IP 冲突"
+    exit 1
+  fi
+fi
+
